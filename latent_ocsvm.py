@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 
 
-class StructuredOCSVM:
+class LatentOCSVM:
 	""" Structured One-class SVM (a.k.a Structured Anomaly Detection).
 		Written by Nico Goernitz, TU Berlin, 2014
 	"""

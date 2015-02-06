@@ -11,9 +11,9 @@ Methods
 
 Joint Feature Maps
 -------------------
-- multi-class joint feature map
-- hidden Markov joint feature map
-- basic procaryotic gene finding joint feature map (based on HMM-jfm) 
+- multi-class
+- hidden Markov model
+- basic procaryotic gene model (based on HMM-jfm) 
 
 Examples
 --------

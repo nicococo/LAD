@@ -11,9 +11,7 @@ from kernel import Kernel
 from ocsvm import OCSVM
 
 from ssvm import SSVM
-from latentsvdd import LatentSVDD
-from structured_ocsvm import StructuredOCSVM
-from structured_pca import StructuredPCA
+from latent_ocsvm import LatentOCSVM
 from toydata import ToyData
 
 from so_pgm import SOPGM

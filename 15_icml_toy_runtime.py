@@ -8,8 +8,7 @@ import scipy.io as io
 
 from kernel import Kernel
 from ocsvm import OCSVM
-from latentsvdd import LatentSVDD
-from structured_ocsvm import StructuredOCSVM
+from latent_ocsvm import LatentOCSVM
 
 from toydata import ToyData
 from so_hmm import SOHMM
