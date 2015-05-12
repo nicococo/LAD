@@ -1,11 +1,7 @@
-from cvxopt import matrix,spmatrix,sparse,normal,spdiag
-from cvxopt.blas import dot,dotu
+from cvxopt import matrix, sparse, spdiag
 from cvxopt.solvers import qp
 import numpy as np
-import math as math
 
-from kernel import Kernel
-from svdd import SVDD
 
 class SSVM:
     """ (Primal) Structured Output Support Vector Machine

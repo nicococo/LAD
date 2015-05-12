@@ -29,43 +29,44 @@ def get_model(num_exm, num_train, lens, block_len, blocks=1, anomaly_prob=0.15):
         # some lbl statistics
         if i<num_train:
             lblcnt += lbl
-    X = normalize_sequence_data(X)
+    X = normalize_sequence_data(X, num_train)
     return (SOHMM(X[0:num_train],Y[0:num_train]), SOHMM(X[num_train:],Y[num_train:]), SOHMM(X,Y), label)
 
 
-def normalize_sequence_data(X, dims=1):
+def normalize_sequence_data(X, num_train, dims=1):
     cnt = 0
     tst_mean = co.matrix(0.0, (1, dims))
-    for i in range(len(X)):
-        lens = len(X[i][0,:])
+    for i in range(num_train):
+        lens = len(X[i][0, :])
         cnt += lens
-        tst_mean += co.matrix(1.0, (1, lens))*X[i].trans()
+        tst_mean += co.matrix(1.0, (1, lens)) * X[i].trans()
     tst_mean /= float(cnt)
     print tst_mean
-    
+
     max_val = co.matrix(-1e10, (1, dims))
     for i in range(len(X)):
         for d in range(dims):
-            X[i][d,:] = X[i][d,:]-tst_mean[d]
-            foo = np.max(np.abs(X[i][d,:]))
-            max_val[d] = np.max([max_val[d], foo])
-    
+            X[i][d, :] = X[i][d, :] - tst_mean[d]
+            foo = np.max(np.abs(X[i][d, :]))
+            if i < num_train:
+                max_val[d] = np.max([max_val[d], foo])
+
     print max_val
     for i in range(len(X)):
         for d in range(dims):
-            X[i][d,:] /= max_val[d]
+            X[i][d, :] /= max_val[d]
 
     cnt = 0
     max_val = co.matrix(-1e10, (1, dims))
     tst_mean = co.matrix(0.0, (1, dims))
     for i in range(len(X)):
-        lens = len(X[i][0,:])
+        lens = len(X[i][0, :])
         cnt += lens
-        tst_mean += co.matrix(1.0, (1, lens))*X[i].trans()
+        tst_mean += co.matrix(1.0, (1, lens)) * X[i].trans()
         for d in range(dims):
-            foo = np.max(np.abs(X[i][d,:]))
+            foo = np.max(np.abs(X[i][d, :]))
             max_val[d] = np.max([max_val[d], foo])
-    print tst_mean/float(cnt)
+    print tst_mean / float(cnt)
     print max_val
     return X
 
@@ -113,12 +114,59 @@ def build_seq_kernel(data, ord=2, type='linear', param=1.0):
     kern = Kernel.get_kernel(phi, phi, type=type, param=param)
     return kern, phi
 
-def build_kernel(data, num_train, bins=2, ord=2, typ='linear', param=1.0):
-    if typ=='hist':
+
+def build_fisher_kernel(data, labels, num_train, ord=2, param=2, set_rand=False):
+    # estimate the transition and emission matrix given the training
+    # data only. Number of states is specifified in 'param'.
+    N = len(data)
+    (F, LEN) = data[0].size
+
+    A = np.zeros((param, param))
+    E = np.zeros((param, F))
+
+    phi = co.matrix(0.0, (param * param + F * param, N))
+    cnt = 0
+    cnt_states = np.zeros(param)
+    for n in xrange(num_train):
+        lbl = np.array(labels[n])[0, :]
+        exm = np.array(data[n])
+        for i in range(param):
+            for j in range(param):
+                A[i, j] += np.where((lbl[:-1] == i) & (lbl[1:] == j))[0].size
+        for i in range(param):
+            for f in range(F):
+                inds = np.where(lbl == i)[0]
+                E[i, f] += np.sum(exm[f, inds])
+                cnt_states[i] += inds.size
+        cnt += LEN
+
+    for i in range(param):
+        E[i, :] /= cnt_states[i]
+    sol = co.matrix(np.vstack((A.reshape(param * param, 1) / float(cnt), E.reshape(param * F, 1))))
+    print sol
+
+    if set_rand:
+        print('Set random parameter vector for Fisher kernel.')
+        # sol = co.uniform(param*param+param*F, a=-1.0, b=+1.0)
+        sol = co.uniform(param * param + param * F)
+
+    model = SOHMM(data, labels)
+    for n in range(N):
+        (val, latent, phi[:, n]) = model.argmax(sol, n)
+        phi[:, n] /= np.linalg.norm(phi[:, n], ord=ord)
+
+    kern = Kernel.get_kernel(phi, phi)
+    return kern, phi
+
+
+def build_kernel(data, labels, num_train, bins=2, ord=2, typ='linear', param=1.0):
+    if typ == 'hist':
         foo, phi = build_seq_kernel(data, ord=-1)
         return build_histograms(data, phi, num_train, bins=param, ord=ord)
-    elif typ=='':
-        return -1,-1
+    elif typ == 'fisher':
+        return build_fisher_kernel(data, labels, num_train, ord=ord, param=param, set_rand=False)
+    elif typ == 'fisher-rand':
+        return build_fisher_kernel(data, labels, num_train, ord=ord, param=param, set_rand=True)
     else:
         return build_seq_kernel(data, ord=ord, type=typ.lower(), param=param)
 
@@ -132,6 +180,7 @@ def test_bayes(phi, kern, train, test, num_train, anom_prob, labels):
     auc = metric.auc(fpr, tpr)
     return auc
 
+
 def test_ocsvm(phi, kern, train, test, num_train, anom_prob, labels):
     auc = 0.5
     ocsvm = OCSVM(kern[:num_train,:num_train], C=1.0/(num_train*anom_prob))
@@ -142,10 +191,11 @@ def test_ocsvm(phi, kern, train, test, num_train, anom_prob, labels):
         auc = metric.auc(fpr, tpr)
     return auc
 
+
 def test_hmad(phi, kern, train, test, num_train, anom_prob, labels, zero_shot=False):
     auc = 0.5
     # train structured anomaly detection
-    sad = StructuredOCSVM(train, C=1.0/(num_train*anom_prob))
+    sad = LatentOCSVM(train, C=1.0/(num_train*anom_prob))
     (lsol, lats, thres) = sad.train_dc(max_iter=60, zero_shot=zero_shot)
     (pred_vals, pred_lats) = sad.apply(test)    
     (fpr, tpr, thres) = metric.roc_curve(labels[num_train:], pred_vals)
@@ -163,15 +213,20 @@ if __name__ == '__main__':
     LVL = [0.025, 0.05, 0.1, 0.15, 0.2, 0.3]
     BLOCKS = 2
 
-    methods = ['Bayes' ,'HMAD','OcSvm','OcSvm','OcSvm','OcSvm','OcSvm','OcSvm','OcSvm','OcSvm']
-    kernels = ['Linear',''    ,'RBF'  ,'RBF'  ,'RBF'  ,'Hist' ,'Hist' ,'Hist' ,'Linear','Linear']
-    kparams = [''      ,''    ,  00.1 ,  01.0 ,  10.0 , 4     , 8     , 10    , ''     , '']
-    ords    = [+1      , 1    ,  1    ,  1    ,  1    , 1     , 1     , 1     , 1      , 2]
+    # methods = ['Bayes' ,'HMAD','OcSvm','OcSvm','OcSvm','OcSvm','OcSvm','OcSvm','OcSvm','OcSvm']
+    # kernels = ['Linear',''    ,'RBF'  ,'RBF'  ,'RBF'  ,'Hist' ,'Hist' ,'Hist' ,'Linear','Linear']
+    # kparams = [''      ,''    ,  00.1 ,  01.0 ,  10.0 , 4     , 8     , 10    , ''     , '']
+    # ords    = [+1      , 1    ,  1    ,  1    ,  1    , 1     , 1     , 1     , 1      , 2]
 
     #methods = ['OcSvm','OcSvm','OcSvm']
     #kernels = ['RBF'  ,'RBF'  ,'RBF'  ]
     #kparams = [  10.1 ,  100.0  ,  1000.0  ]
     #ords    = [  1    ,  1    ,  1    ]
+
+    methods = ['Bayes', 'HMAD', 'OcSvm', 'OcSvm']
+    kernels = ['Linear', '', 'Fisher', 'Fisher-Rand']
+    kparams = [1, '', 2, 2]
+    ords    = [1, 1, 1, 1]
 
     # collected means
     res = []
@@ -180,7 +235,7 @@ if __name__ == '__main__':
             (train, test, comb, labels) = get_model(EXMS, EXMS_TRAIN, LENS, BLOCK_LEN, blocks=BLOCKS, anomaly_prob=LVL[b])
             for m in range(len(methods)):
                 name = 'test_{0}'.format(methods[m].lower())
-                (kern, phi) = build_kernel(comb.X, EXMS_TRAIN, ord=ords[m], typ=kernels[m].lower(), param=kparams[m])
+                (kern, phi) = build_kernel(comb.X, comb.y, EXMS_TRAIN, ord=ords[m], typ=kernels[m].lower(), param=kparams[m])
                 print('Calling {0}'.format(name))
                 auc = eval(name)(phi, kern, train, test, EXMS_TRAIN, LVL[b], labels)
                 print('-------------------------------------------------------------------------------')
@@ -247,6 +302,6 @@ if __name__ == '__main__':
     data['varis'] = varis
     data['names'] = names
 
-    io.savemat('15_icml_toy_adfrac_b0.mat',data)
+    io.savemat('15_icml_toy_adfrac_c0.mat', data)
 
     print('finished')

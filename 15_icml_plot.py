@@ -141,8 +141,6 @@ def plot_icml_wind_results():
     print('finished')
 
 
-
-
 def plot_icml_toy_results():
     filename = '15_icml_toy_runtime_b0'
     filename = '15_icml_toy_ad_b0'
@@ -223,6 +221,70 @@ def plot_icml_toy_results():
     plt.show()
 
 
+def plot_icml_toy_fisher_results():
+    filename = '15_icml_toy_ad_c0'
+    filename = '15_icml_toy_adfrac_c0'
+
+    # anomaly detection results
+    data = io.loadmat('{0}'.format(filename))
+
+    blocks = data['BLOCKS'][0][::-1]
+    blocks = data['BLOCKS'][0] # for ad experiment
+    if 'adfrac' in filename:
+        blocks = [0.025, 0.05, 0.1, 0.15, 0.2, 0.3] # for adfrac experiment
+    print blocks
+    lens = len(data['BLOCKS'][0])
+    reps = float(data['REPS'][0][0])
+    print reps
+    names = data['names']
+    print names
+    if 'runtime' in filename:
+        aucs = data['times']
+    else:
+        aucs = data['aucs']
+    stds = data['stds']
+    varis = data['varis']
+    print aucs
+
+    plt.figure(1)
+    style = ['-','--','-','.-']
+    marker = ['D','o','D','D']
+    colors = ['r','b','r','m']
+    alphas = [1. ,0.9, .6 ,.6 ]
+    widths = [2  ,4  ,1  ,1  ]
+
+    plt.fill_between(blocks, aucs[2, :], aucs[3, :], color=[0.7, 0.7, 0.7], alpha=0.5)
+
+    remain_idx = [2, 3, 1]
+    for i in range(len(names)):
+        if not i in remain_idx:
+            continue
+
+        plt.errorbar(blocks, aucs[i, :], yerr=stds[i, :], \
+            fmt=style[i], color=colors[i], linewidth=widths[i], alpha=alphas[i], marker=marker[i], markersize=10)
+
+    if '_ad_' in filename:
+        plt.xscale('log')
+        plt.xticks(blocks, ['0%','2%','5%','10%','20%','40%','60%','100%'], fontsize=18)
+        plt.xlabel('Percentage of disorganization',fontsize=22)
+        plt.yticks([0.4,0.6,0.8,1.0,1.02], ['0.4','0.6','0.8','1.0',''], fontsize=18)
+        plt.ylabel('Detection accuracy [in AUC]',fontsize=22)
+
+    if 'adfrac' in filename:
+        plt.xticks(blocks, ['2.5%','5%','10%','15%','20%','30%'], fontsize=18)
+        plt.xlim((0.025,0.3))
+        plt.xlabel('Percentage of anomalous data',fontsize=22)
+        plt.yticks([0.0,0.2,0.4,0.6,0.8,1.0,1.02], ['','0.2','0.4','0.6','0.8','1.0',''], fontsize=18)
+        plt.ylabel('Detection accuracy [in AUC]',fontsize=22)
+
+    names = list()
+    names.append('HMAD')
+    names.append('Fisher Kernel Upper Bound')
+    names.append('Fisher Kernel Lower Bound')
+    plt.legend(names, loc=3, fancybox=True, framealpha=0.7, fontsize=20)
+
+    plt.show()
+
 
 def plot_icml_toy_seqs():
     from toydata import ToyData
@@ -261,4 +323,4 @@ def plot_icml_toy_seqs():
 
 
 if __name__ == '__main__':
-    plot_icml_pgm_results()
+    plot_icml_toy_fisher_results()
