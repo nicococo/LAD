@@ -286,6 +286,52 @@ def plot_icml_toy_fisher_results():
     plt.show()
 
 
+def plot_icml_toy_states_results():
+    filename = '15_icml_toy_states_c0'
+
+    # anomaly detection results
+    data = io.loadmat('{0}'.format(filename))
+
+    blocks = data['BLOCKS'][0][::-1]
+    blocks = data['BLOCKS'][0] # for ad experiment
+    print blocks
+    lens = len(data['BLOCKS'][0])
+    reps = float(data['REPS'][0][0])
+    print reps
+    names = data['names']
+    print names
+    if 'runtime' in filename:
+        aucs = data['times']
+    else:
+        aucs = data['aucs']
+    stds = data['stds']
+    varis = data['varis']
+    print aucs
+
+    plt.figure(1)
+    style = ['--']
+    marker = ['o']
+    colors = ['b']
+    alphas = [0.9]
+    widths = [4]
+
+    for i in range(len(names)):
+
+        plt.errorbar(blocks, aucs[i, :], yerr=stds[i, :], \
+            fmt=style[i], color=colors[i], linewidth=widths[i], alpha=alphas[i], marker=marker[i], markersize=10)
+
+        plt.xticks(blocks, fontsize=18)
+        plt.xlabel('Number of hidden states', fontsize=22)
+        plt.yticks([0.4, 0.6, 0.8, 1.0, 1.02], ['0.4','0.6','0.8','1.0',''], fontsize=18)
+        plt.ylabel('Detection accuracy [in AUC]', fontsize=22)
+
+    names = list()
+    names.append('HMAD')
+    plt.legend(names, loc=3, fancybox=True, framealpha=0.7, fontsize=20)
+
+    plt.show()
+
+
 def plot_icml_toy_seqs():
     from toydata import ToyData
     lens = 600
@@ -323,4 +369,4 @@ def plot_icml_toy_seqs():
 
 
 if __name__ == '__main__':
-    plot_icml_toy_fisher_results()
+    plot_icml_toy_states_results()
