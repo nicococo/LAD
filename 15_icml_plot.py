@@ -1,5 +1,8 @@
 import matplotlib
 matplotlib.use('QT4Agg')
+# change to type 1 fonts!
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
 import matplotlib.pyplot as plt
 import numpy as np
 import pylab as pl
@@ -21,7 +24,7 @@ def plot_icml_pgm_results():
 
 
     for f in range(len(files)):
-        data = io.loadmat('icml_pgm_d{0}'.format(str(files[f])))
+        data = io.loadmat('/home/nicococo/mnt/Documents/2015_icml/icml_pgm_d{0}'.format(str(files[f])))
         res = data['res']
         auc = data['auc']
 
@@ -97,7 +100,7 @@ def plot_icml_wind_results():
     avars = np.zeros((len(anames),len(files)))
 
     for f in range(len(files)):
-        data = io.loadmat('15_icml_wind_c{0}'.format(str(files[f])))
+        data = io.loadmat('/home/nicococo/mnt/Documents/2015_icml/15_icml_wind_c{0}'.format(str(files[f])))
         res = data['res']
         auc = data['auc']
         for idx in range(len(rnames)):
@@ -142,9 +145,9 @@ def plot_icml_wind_results():
 
 
 def plot_icml_toy_results():
-    filename = '15_icml_toy_runtime_b0'
-    filename = '15_icml_toy_ad_b0'
-    filename = '15_icml_toy_adfrac_b0'
+    filename = '/home/nicococo/mnt/Documents/2015_icml/15_icml_toy_runtime_b0'
+    # filename = '/home/nicococo/mnt/Documents/2015_icml/15_icml_toy_ad_b0'
+    # filename = '/home/nicococo/mnt/Documents/2015_icml/15_icml_toy_adfrac_b0'
 
     # anomaly detection results
     data = io.loadmat('{0}'.format(filename))
@@ -223,7 +226,7 @@ def plot_icml_toy_results():
 
 def plot_icml_toy_fisher_results():
     filename = '15_icml_toy_ad_c0'
-    filename = '15_icml_toy_adfrac_c0'
+    # filename = '15_icml_toy_adfrac_c0'
 
     # anomaly detection results
     data = io.loadmat('{0}'.format(filename))
@@ -369,4 +372,4 @@ def plot_icml_toy_seqs():
 
 
 if __name__ == '__main__':
-    plot_icml_toy_states_results()
+    plot_icml_toy_results()
