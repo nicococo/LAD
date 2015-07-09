@@ -1,6 +1,16 @@
 LAD
 ===
 
+If you use any of the code in your paper, please cite:
+
+@inproceedings{goernitz2015hidden,
+  title={Hidden Markov Anomaly Detection},
+  author={Goernitz, Nico and Braun, Mikio and Kloft, Marius},
+  booktitle={Proceedings of The 32nd International Conference on Machine Learning},
+  pages={1833--1842},
+  year={2015}
+}
+
 [L]atent [A]nomaly [D]etection
 
 Methods
